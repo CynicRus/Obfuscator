@@ -1,6 +1,6 @@
-unit Obfuscator;
-/**
-* This file is part of the Simba Obfuscator.
+unit ob_obfuscator;
+{**
+* This file is part of the Obfuscator for PascalScript.
 * Simba Obfuscator. is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
@@ -13,114 +13,98 @@ unit Obfuscator;
 *
 * You should have received a copy of the GNU General Public License
 * along with Simba Obfuscator. If not, see <http://www.gnu.org/licenses/>.
-*/
+*}
+{$mode objfpc}{$H+}
+
 interface
 
 uses
-  Analyzer, StrUtils, SysUtils;
+  ob_analyzer,Math, SysUtils;
 
 const
 {$WARNINGS OFF}
-  Chars: set of Char = ['(', ')', '+', '-', '*', '/', ';', '=', ')', '[', ']',
+  Chars: set of Char = ['(', ')', '+', '-', '*', '/', ';', '=', '[', ']',
     ',', '@', ':', '.', '<', '>', '#', '$', '''', '"', '{'];
 {$WARNINGS ON}
-  Reserved: array [0 .. 27] of string = ('program', 'var', 'const', 'begin',
+  Reserved: array [0 .. 28] of string = ('program', 'var', 'const', 'begin',
     'end', 'if', 'then', 'while', 'do', 'repeat', 'until', 'case', 'of', 'for',
     'to', 'as', 'is', 'mod', 'div', 'or', 'and', 'xor', 'uses', 'type',
-    'function', 'procedure', 'string', 'nil');
-
-type
-  ObfuscationOptions = // Опции обфускации
-    ( //
-    ooUnreadable, // нечитаемые имена
-    // ooInvisible, // невидимые имена , будут, если будет юникод
-    ooMuchBrackets // вставка скобок вокруг числовых констант
+    'function', 'procedure', 'string', 'nil','pointer');
+  type
+  ObfuscationOptions =
+    (
+    ooUnreadable,
+    // ooInvisible, // РЅРµРІРёРґРёРјС‹Рµ РёРјРµРЅР° , Р±СѓРґСѓС‚, РµСЃР»Рё Р±СѓРґРµС‚ СЋРЅРёРєРѕРґ
+    ooMuchBrackets
     );
 
 const
-  SetOptions: // Выбранные опции
+  SetOptions:
     set of ObfuscationOptions = [ooUnreadable, ooMuchBrackets];
 
-type
-  // TArray<t> = array of t;
+  type
 
   TBeginEnd = record
     beginPos, endPos: Integer;
   end;
-  (*
-    Тип для передачи тела методов обрабатывающим функциям
-  *)
 
+  TBEArray = array of TBeginEnd;
+  TStrArray = array of String;
   TIdArray = record
-    I: TArray<string>;
-    class operator Implicit(a: TArray<string>): TIdArray;
-    class operator Add(left, right: TIdArray): TIdArray;
+    I: TStrArray;
   end;
-  (*
-    Массив идентификаторов ( константы и переменные )
-  *)
+
+
 
   TMArray = record
-    Names: TArray<string>;
-    Positions: TArray<TBeginEnd>;
-    class operator Add(left, right: TMArray): TMArray;
+    Names: TStrArray;
+    Positions: TBEArray;
   end;
-  (*
-    Массив имен методов и их определений в коде
-  *)
 
   TObfuscator = class(TObject)
   private
-    FLexems: TLexems; // Массив лексем
-    FLC: UInt32; // Кол-во лексем
+    FLexems: TLexems;
+    FLC: Integer;
     FOutText: string;
     FInnerText: string;
-    GlobalConsts: TIdArray; // массив объявленных констант
-    GlobalVars: TIdArray; // массив объявленныз переменных
-    Methods: TMArray; // массив объявленных методов
-    FAnalyzer: TLexicalAnalyzer; // лексический анализатор
-    procedure FindConsts(var constsArray: TArray<string>; const pos: Integer);
-    // Ищет имена констант, pos - индекс лексемы с именем 'conts'
-    procedure FindVars(var varsArray: TArray<string>; const pos: Integer);
-    // Ищет имена переменных, pos - индекс лексемы с именем 'var'
+    GlobalConsts: TIdArray;
+    GlobalVars: TIdArray;
+    Methods: TMArray;
+    FAnalyzer: TLexicalAnalyzer;
+    procedure FindConsts(var constsArray: TStrArray; const pos: Integer);
+
+    procedure FindVars(var varsArray: TStrArray; const pos: Integer);
+
     procedure ObfuscateNumbers; //
-    // добавляет скобки к числовым константам
+
     procedure ObfuscateMethods;
-    // коверкает имена методов, и коверкаих их вызовы
-    // в коде
+
     procedure ObfuscateGlobals;
-    // то же, что и предыдущая процедура, но работает
-    // с переменными и константами
+
     procedure GetGlobal; //
-    // Ищет все объявления констант и переменных
     procedure GetMethods; //
-    // Ищет все объявления методов
     function GenerateUnRdblName: string; //
-    // Генерирует нечитаемое имя
-{$HINTS OFF} // убрать директивы после включения данной ф-ии в работу
+{
     function GenerateInvslbName: string; //
-    // Генерирует невидимое имя
-{$HINTS ON}
+}
     function AddBrackets(const Src: string): string; //
-    // Добавляет скобки вокруг идентификатора Src
-    function FindLexem(const Name: string; const Offset: UInt32 = 0): Int32; //
-    // Возвращает индекс лексемы с именем Name. Поиск начинается с индекса Offset
+    function FindLexem(const Name: string; const Offset: Cardinal = 0): Cardinal; //
     function IsReserved(const Name: string): boolean;
-    // Проверяет, является ли Name зарезервированным словом
-    // Сеттеры
+    function GenerateExpr(const num: string): string;
     procedure SetInText(txt: string);
   public
-    procedure Obfuscate; // Обфусцирует входные данные
+    procedure Obfuscate;
     constructor Create;
     destructor Destroy; override;
     property OutText: string read FOutText;
-    // Обфусцированный скрипт - выход программы
-    property InnerText: string read FInnerText write SetInText;
-    // Входной текст. Должен быть синтаксически правильным.
+    property InnerText: string read FInnerText write FInnerText;
   end;
 
 function MArray(Name: string; Position: TBeginEnd): TMArray;
-// Преобразует данные в тип TMArray
+
+Operator := (A : TStrArray) R : TIDArray;
+Operator + (left,right: TIdArray): TIdArray;
+Operator + (left,right: TMArray): TMArray;
 
 implementation
 
@@ -135,7 +119,49 @@ begin
   Result := tmp;
 end;
 
-{ TObfuscator }
+operator:=(A: TStrArray)R: TIDArray;
+var
+  j: Integer;
+  t: TIdArray;
+begin
+  SetLength(t.I, Length(a));
+  for j := 0 to Length(a) - 1 do
+    t.I[j] := a[j];
+  R := t;
+end;
+
+operator+(left, right: TIdArray): TIdArray;
+var
+  j: Integer;
+  t: TIdArray;
+begin
+  SetLength(t.I, Length(left.I) + Length(right.I));
+  for j := 0 to Length(left.I) - 1 do
+    t.I[j] := left.I[j];
+  for j := Length(left.I) to Length(t.I) - 1 do
+    t.I[j] := right.I[j - Length(left.I)];
+  Result := t;
+end;
+
+operator+(left, right: TMArray): TMArray;
+var
+  j: Integer;
+  t: TMArray;
+begin
+  SetLength(t.Names, Length(left.Names) + Length(right.Names));
+  SetLength(t.Positions, Length(left.Positions) + Length(right.Positions));
+  for j := 0 to Length(left.Names) - 1 do
+  begin
+    t.Names[j] := left.Names[j];
+    t.Positions[j] := left.Positions[j];
+  end;
+  for j := Length(left.Names) to Length(t.Names) - 1 do
+  begin
+    t.Names[j] := right.Names[j - Length(left.Names)];
+    t.Positions[j] := right.Positions[j - Length(left.Positions)];
+  end;
+  Result := t;
+end;
 
 function TObfuscator.AddBrackets(const Src: string): string;
 var
@@ -172,7 +198,7 @@ begin
   inherited;
 end;
 
-procedure TObfuscator.FindConsts(var constsArray: TArray<string>;
+procedure TObfuscator.FindConsts(var constsArray: TStrArray;
   const pos: Integer);
 var
   len, I: Integer;
@@ -197,7 +223,7 @@ begin
 end;
 
 function TObfuscator.FindLexem(const Name: string;
-  const Offset: UInt32 = 0): Int32;
+  const Offset: Cardinal = 0): Cardinal;
 var
   I: Integer;
 begin
@@ -205,21 +231,25 @@ begin
   for I := Offset to FLC - 1 do
   begin
 
-    case StringQuote of // Строковые константы не трогаем
+    case StringQuote of
       sqSingle:
         begin
-          if FLexems[I + 1].Lexem =#39 then
-            Continue;
+          if (I + 1) < FLC then
+            if FLexems[I + 1].Lexem = '''' then
+              Continue;
         end;
       sqDouble:
         begin
-          if FLexems[I + 1].Lexem = '"' then
-            Continue;
+          if (I + 1) < FLC then
+            if FLexems[I + 1].Lexem = '"' then
+              Continue;
         end;
       sqSingleAndDouble:
         begin
-          if (FLexems[I + 1].Lexem = #39) or (FLexems[I + 1].Lexem = '"') then
-            Continue;
+          if (I + 1) < FLC then
+            if (FLexems[I + 1].Lexem = '''') or (FLexems[I + 1].Lexem = '"')
+            then
+              Continue;
         end;
     end;
 
@@ -231,7 +261,7 @@ begin
   end;
 end;
 
-procedure TObfuscator.FindVars(var varsArray: TArray<string>;
+procedure TObfuscator.FindVars(var varsArray: TStrArray;
   const pos: Integer);
 var
   len, I: Integer;
@@ -266,9 +296,26 @@ begin
   end;
 end;
 
-function TObfuscator.GenerateInvslbName: string;
+function TObfuscator.GenerateExpr(const num: string): string;
+var
+  tmp, t1, t2, t3, m, rn: Integer;
+begin
+  Result := '';
+  tmp := strtoint(num);
+  Randomize;
+  t1 := tmp - (Random(tmp) + 1);
+  t2 := tmp - t1;
+  Result := Result + inttostr(t1) + '+';
+  rn := Random(5) + 1;
+  t3 := t2 div rn;
+  m := t2 mod rn;
+  Result := Result + '(' + inttostr(t3) + '*' + inttostr(rn) + '+' +
+    inttostr(m) + ')';
+end;
+
+{function TObfuscator.GenerateInvslbName: string;
 const
-  InvslbSymbols: array [0 .. 6] of Char = (' ', '?', '?', '?', '?', '?', ' ');
+  InvslbSymbols: array [0 .. 6] of Char = ('В ', 'Н–', 'Ц№', 'Щґ', 'вЂЋ', 'вЂЏ', ' ');
 var
   len, I: Integer;
   tmpName: string;
@@ -279,27 +326,27 @@ begin
   for I := 0 to len - 1 do
     tmpName := tmpName + InvslbSymbols[Random(7)];
   Result := tmpName;
-end;
+end; }
 
 function TObfuscator.GenerateUnRdblName: string;
 const
-  UnrdlbSymbols = 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM';
+  UnrdlbSymbols = 'qwertyuiopasdfghjklzxcvbnm_QWERTYUIOPASDFGHJKLZXCVBNM';
 var
-  len, I: Integer;
-  tmpName: string;
+   S: string;
+   i, N,len: integer;
 begin
-  tmpName := '';
-  Randomize;
-  len := 20+Random(25);
-  for I := 0 to len - 1 do
-    tmpName := tmpName + UnrdlbSymbols[Random(Length(UnrdlbSymbols)) + 1];
-  Result := tmpName;
+  len:= RandomRange(5,Length(UnrdlbSymbols));
+  for i := 1 to len-1 do begin
+    N := Random(Length(UnrdlbSymbols)) + 1;
+    S := S + UnrdlbSymbols[N];
+  end;
+  Result:=S;
 end;
 
 procedure TObfuscator.GetGlobal;
 var
   cPos, vPos: Integer;
-  tmp: TArray<string>;
+  tmp: TStrArray;
 begin
   cPos := 0;
   cPos := FindLexem('const', cPos + 1);
@@ -328,13 +375,12 @@ var
   tmpP: TBeginEnd;
 begin
   mPos := 0;
-  // ищем функции
   mPos := FindLexem('function', mPos + 1);
   while mPos > 0 do
   begin
-    tmpN := FLexems[mPos + 1].Lexem; // Получили имя метода
-    tmpP.beginPos := FindLexem('begin', mPos); // позиция первого BEGIN
-    br := 1; // кол-во открытых блоков begin..end
+    tmpN := FLexems[mPos + 1].Lexem;
+    tmpP.beginPos := FindLexem('begin', mPos);
+    br := 1;
     id := tmpP.beginPos + 1;
     while br > 0 do
     begin
@@ -344,19 +390,19 @@ begin
         Dec(br);
       Inc(id);
     end;
-    tmpP.endPos := id - 1; // позиция последнего END
+    tmpP.endPos := id - 1;
     Methods := Methods + MArray(tmpN, tmpP);
 
     mPos := FindLexem('function', mPos + 1);
   end;
 
-  // процедуры
+
   mPos := FindLexem('procedure', mPos + 1);
   while mPos > 0 do
   begin
-    tmpN := FLexems[mPos + 1].Lexem; // Получили имя метода
-    tmpP.beginPos := FindLexem('begin', mPos); // позиция первого BEGIN
-    br := 1; // кол-во открытых блоков begin..end
+    tmpN := FLexems[mPos + 1].Lexem;
+    tmpP.beginPos := FindLexem('begin', mPos);
+    br := 1;
     id := tmpP.beginPos + 1;
     while br > 0 do
     begin
@@ -366,7 +412,7 @@ begin
         Dec(br);
       Inc(id);
     end;
-    tmpP.endPos := id - 1; // позиция последнего END
+    tmpP.endPos := id - 1;
     Methods := Methods + MArray(tmpN, tmpP);
 
     mPos := FindLexem('procedure', mPos + 1);
@@ -390,8 +436,9 @@ end;
 
 procedure TObfuscator.Obfuscate;
 var
-  I: Int32;
+  I: integer;
 begin
+  SetInText(FInnerText);
   GetGlobal;
   GetMethods;
   ObfuscateMethods;
@@ -400,12 +447,7 @@ begin
     ObfuscateNumbers;
 
   FOutText := FLexems[0].Lexem;
-  (*
-    Складываем лексемы вместе. В зависимости от типов стоящих рядом лексем,
-    пробел между ними либо добавляется, либо нет. Например, можно написать
-    a:=b+c; вместо a := b + c;, но нельзя слить вместе идентификаторы, например
-    написать beginend. вместо begin end.
-  *)
+
   for I := 1 to FLC - 1 do
   begin
     if (FLexems[I - 1].LexType = 0) and ((FLexems[I].LexType = 0)) then
@@ -426,22 +468,17 @@ end;
 procedure TObfuscator.ObfuscateGlobals;
 var
   I, j: Integer;
-  tmp: string;
+  atmp: string;
 begin
   if Length(GlobalConsts.I) > 0 then
     for j := 0 to Length(GlobalConsts.I) - 1 do
     begin
       // if ooUnreadable in SetOptions then
-      (*
-        Раскомментируйте эту строку, когда будет поддержка Юникода. Тогда надо будет
-        проверять, какие имена генерировать, невидимые или нечитаемые
-      *)
-      tmp := GenerateUnRdblName; { GeneraetInvsblName; }
-    // tmp:='';
+       atmp := GenerateUnRdblName;
       for I := 2 to FLC - 1 do
       begin
         if UpperCase(FLexems[I].Lexem) = UpperCase(GlobalConsts.I[j]) then
-          FLexems[I].Lexem := tmp;
+          FLexems[I].Lexem := atmp;
       end;
     end;
 
@@ -449,15 +486,11 @@ begin
     for j := 0 to Length(GlobalVars.I) - 1 do
     begin
       // if ooUnreadable in SetOptions then
-      (*
-        Раскомментируйте эту строку, когда будет поддержка Юникода. Тогда надо будет
-        проверять, какие имена генерировать, невидимые или нечитаемые
-      *)
-      tmp := GenerateUnRdblName; { GeneraetInvsblName; }
+       atmp := GenerateUnRdblName;
       for I := 2 to FLC - 1 do
       begin
         if UpperCase(FLexems[I].Lexem) = UpperCase(GlobalVars.I[j]) then
-          FLexems[I].Lexem := tmp;
+          FLexems[I].Lexem := atmp;
       end;
     end;
 end;
@@ -465,22 +498,18 @@ end;
 procedure TObfuscator.ObfuscateMethods;
 var
   I, j: Integer;
-  tmp: string;
+  atmp: string;
 begin
   if Length(Methods.Names) <= 0 then
     Exit;
   for j := 0 to Length(Methods.Names) - 1 do
   begin
     // if ooUnreadable in SetOptions then
-    (*
-      Раскомментируйте эту строку, когда будет поддержка Юникода. Тогда надо будет
-      проверять, какие имена генерировать, невидимые или нечитаемые
-    *)
-    tmp := GenerateUnRdblName; { GeneraetInvsblName; }
+     atmp := GenerateUnRdblName;
     for I := 2 to FLC - 1 do
     begin
       if UpperCase(FLexems[I].Lexem) = UpperCase(Methods.Names[j]) then
-        FLexems[I].Lexem := tmp;
+        FLexems[I].Lexem := atmp;
     end;
   end;
 end;
@@ -492,7 +521,11 @@ begin
   for I := 0 to FLC - 1 do
   begin
     if FLexems[I].LexType = 1 then
+    begin
+      if pos('.', FLexems[I].Lexem) = 0 then
+        FLexems[I].Lexem := GenerateExpr(FLexems[I].Lexem);
       FLexems[I].Lexem := AddBrackets(FLexems[I].Lexem);
+    end;
   end;
 end;
 
@@ -509,52 +542,5 @@ begin
     FLexems[I] := FAnalyzer.Lexem[I]
 end;
 
-{ TIdArray }
-
-class operator TIdArray.Add(left, right: TIdArray): TIdArray;
-var
-  j: Integer;
-  t: TIdArray;
-begin
-  SetLength(t.I, Length(left.I) + Length(right.I));
-  for j := 0 to Length(left.I) - 1 do
-    t.I[j] := left.I[j];
-  for j := Length(left.I) to Length(t.I) - 1 do
-    t.I[j] := right.I[j - Length(left.I)];
-  Result := t;
-end;
-
-class operator TIdArray.Implicit(a: TArray<string>): TIdArray;
-var
-  j: Integer;
-  t: TIdArray;
-begin
-  SetLength(t.I, Length(a));
-  for j := 0 to Length(a) - 1 do
-    t.I[j] := a[j];
-  Result := t;
-end;
-
-{ TMArray }
-
-class operator TMArray.Add(left, right: TMArray): TMArray;
-var
-  j: Integer;
-  t: TMArray;
-begin
-  SetLength(t.Names, Length(left.Names) + Length(right.Names));
-  SetLength(t.Positions, Length(left.Positions) + Length(right.Positions));
-  for j := 0 to Length(left.Names) - 1 do
-  begin
-    t.Names[j] := left.Names[j];
-    t.Positions[j] := left.Positions[j];
-  end;
-  for j := Length(left.Names) to Length(t.Names) - 1 do
-  begin
-    t.Names[j] := right.Names[j - Length(left.Names)];
-    t.Positions[j] := right.Positions[j - Length(left.Positions)];
-  end;
-  Result := t;
-end;
-
 end.
+

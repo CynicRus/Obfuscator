@@ -1,6 +1,6 @@
-unit Analyzer;
-/**
-* This file is part of the Simba Obfuscator.
+unit ob_analyzer;
+{**
+* This file is part of the Obfuscator for PascalScript.
 * Simba Obfuscator. is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
@@ -13,100 +13,93 @@ unit Analyzer;
 *
 * You should have received a copy of the GNU General Public License
 * along with Simba Obfuscator. If not, see <http://www.gnu.org/licenses/>.
-*/
+*}
+{$mode objfpc}{$H+}
+
 interface
 
 uses
   StrUtils, SysUtils;
-
 const
 {$WARNINGS OFF}
-  IdentifierFirstSymbols: // Первый допустимый символ идентификатора
+  IdentifierFirstSymbols:
     set of Char = ['A' .. 'Z', 'a' .. 'z', '_'];
-  IdentifierSymbols: // Символы, допустимые в идентификаторе
+  IdentifierSymbols:
     set of Char = ['A' .. 'Z', 'a' .. 'z', '0' .. '9', '_'];
-  Digits: // Цифры
+  Digits:
     set of Char = ['0' .. '9'];
-  HexDigits: // Шестнадцатеричные цифры
+  HexDigits:
     set of Char = ['A' .. 'F', 'a' .. 'f', '0' .. '9'];
-  ExponentDot = '.'; // Десятичная точка
-  ExponentE: // Символ, отделяющий экспоненту от мантиссы
+  ExponentDot = '.';
+  ExponentE:
     set of Char = ['E', 'e'];
-  Signs: set of Char = ['+', '-']; // Знаки экспоненты
+  Signs: set of Char = ['+', '-'];
 {$WARNINGS ON}
-  CharLineEnd = ';'; // Символ конца инструкции
+  CharLineEnd = ';';
   CommentsLine = '//';
   CommentsOpen = '{';
   CommentsClose = '}';
 
-type
-  TStringQuote = // Типы ковычек, определяющих строковую константу
-    ( //
-    sqSingle, // Одинарные
-    sqDouble, // Двойные
-    sqSingleAndDouble // И те, и другие
+  type
+  TStringQuote =
+    (
+    sqSingle,
+    sqDouble,
+    sqSingleAndDouble
     );
 
 const
-  StringQuote = sqSingle; // Для Паскаля выбираем одинарные
+  StringQuote = sqSingle;
 
 type
+
+  TCharSet = set of Char;
+
   PLexem = ^TLexem;
 
-  TLexem = record // Тип одной лексемы
-    Lexem: string; // Её имя
-    TextPos: UInt32; // И позиция в тексте
-    LexType: Byte; // 0 - идетнификатор; 1 - число; 2 - все остальное
+  TLexem = record
+    Lexem: string;
+    TextPos: integer;
+    LexType: Byte;
   end;
-
-  TLexems = TArray<TLexem>; // Массив лексем
-
-  (*
-    Далее описывается класс лексического анализатора. Указатель (CurrPos)
-    передвигается по мере надобности. Сам анализ происходит следующим
-    образом: сначала проверяется текущий символ (CurrChar), и делает вывод, к
-    какой лексеме он принадлежит: если к числовой константе, вызывается
-    процедура GetNumber, и из строки выделяется числовая константа, указатель
-    перемещается на позицию за этой константой; если это идентификатор, то
-    вызывается функция GetIdentifier, которые выделяет идентификатор. В
-    противном случае, вызывается метод GetOthers, который выделяет все остальные
-    лексемы.
-  *)
+  TLexems = array of TLexem;
 
   TLexicalAnalyzer = class(TObject)
   private
-    CurrPos: UInt32; // Тут хранится позиция указателя
-    CurrChar: Char; // А тут текущий обрабатываемый символ
-    CurrLexem: string; // Текущая лексема
-    FLexemsList: TLexems; // Список лексем
-    FLexemsCount: UInt32; // Кол-во лексем
+    CurrPos: Integer;
+    CurrChar: Char;
+    CurrLexem: string;
+    FLexemsList: TLexems;
+    FLexemsCount: Integer;
     FSource: string;
 
-    procedure GetNextChar; // Переходит на следующий символ
-    procedure Add(Lexem: string; Pos: UInt32; LType: Byte);
-    // Добавляет лексему в список
-    procedure GetNumber; // Выделяет число
-    procedure GetIdentifier; // Выделяет идентификатор
-    procedure GetOthers; // Выделяет остальные лексемы
+    procedure GetNextChar;
+    procedure Add(Lexem: string; Pos: Integer; LType: Byte);
+    procedure GetNumber;
+    procedure GetIdentifier;
+    procedure GetOthers;
     function NextChar: Char;
-    // Возвращает следующий символ, не пемещая указатель
-
-    function GetLexem(ind: UInt32): TLexem;
+    function GenerateAnsi(const Str: string): string;
+    function GetLexem(ind: Integer): TLexem;
     procedure SetSource(src: String);
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Analyze; // Собственно анализ
-    property Lexem[ind: UInt32]: TLexem read GetLexem;
-    property LexemsCount: UInt32 read FLexemsCount;
+    procedure Analyze;
+    property Lexem[ind: Integer]: TLexem read GetLexem;
+    property LexemsCount: Integer read FLexemsCount;
     property Source: string read FSource write SetSource;
   end;
 
 implementation
-
+{Small helper}
+function CharInSet(const Ch: Char; const Chars: TCharSet): Boolean;
+begin
+  Result := Ch in Chars;
+end;
 { TLexicalAnalyzer }
 
-procedure TLexicalAnalyzer.Add(Lexem: string; Pos: UInt32; LType: Byte);
+procedure TLexicalAnalyzer.Add(Lexem: string; Pos: Integer; LType: Byte);
 begin
   if Lexem = '' then
     Exit;
@@ -125,7 +118,7 @@ begin
   GetNextChar;
   while CurrChar <> #0 do
   begin
-    if CurrPos > Cardinal(Length(FSource)) then
+    if CurrPos > Length(FSource) then
       Break;
     case CurrChar of
       'A' .. 'Z', 'a' .. 'z', '_':
@@ -134,7 +127,7 @@ begin
           GetIdentifier;
           ctype := 0;
           if CurrLexem <> '' then
-            Add(CurrLexem, CurrPos - Cardinal(Length(CurrLexem)), ctype);
+            Add(CurrLexem, CurrPos - Length(CurrLexem), ctype);
           CurrLexem := '';
         end;
       '0' .. '9':
@@ -179,6 +172,15 @@ begin
   inherited;
 end;
 
+function TLexicalAnalyzer.GenerateAnsi(const Str: string): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 1 to Length(Str) do
+    Result := Result + '#' + inttostr(Ord(Str[I]));
+end;
+
 procedure TLexicalAnalyzer.GetIdentifier;
 begin
   CurrLexem := CurrChar;
@@ -190,7 +192,7 @@ begin
   end;
 end;
 
-function TLexicalAnalyzer.GetLexem(ind: UInt32): TLexem;
+function TLexicalAnalyzer.GetLexem(ind: integer): TLexem;
 begin
   if ind > (FLexemsCount - 1) then
     Exit;
@@ -200,7 +202,7 @@ end;
 procedure TLexicalAnalyzer.GetNextChar;
 begin
   Inc(CurrPos);
-  if CurrPos > Cardinal(Length(FSource)) then
+  if CurrPos > Length(FSource) then
     CurrChar := #0
   else
     CurrChar := FSource[CurrPos];
@@ -217,7 +219,7 @@ begin
     GetNextChar;
   end;
   if CurrChar <> ExponentDot then
-    Exit; // Целое число
+    Exit;
 
   if not CharInSet(NextChar, Digits) then
     Exit;
@@ -232,7 +234,7 @@ begin
   end;
 
   if not CharInSet(CurrChar, ExponentE) then
-    Exit; // Вещественное число без указания экспоненты
+    Exit;
 
   CurrLexem := CurrLexem + 'E';
   GetNextChar;
@@ -246,14 +248,13 @@ begin
     CurrLexem := CurrLexem + CurrChar;
     GetNextChar;
   end;
-  // Конец :)
+
 end;
 
 procedure TLexicalAnalyzer.GetOthers;
 begin
   case CurrChar of
     '+', '-', '*', '/', ';', '=', ')', '[', ']', ',', '@':
-      // Символы, которые однозначно можно отнести к одной лексеме
       begin
         CurrLexem := CurrChar;
         GetNextChar;
@@ -356,7 +357,7 @@ begin
       begin
         if (StringQuote = sqSingle) or (StringQuote = sqSingleAndDouble) then
         begin
-          Add('''', CurrPos, 2);
+          // Add('''', CurrPos, 2);
           GetNextChar;
           while CurrChar <> '''' do
           begin
@@ -364,8 +365,12 @@ begin
             GetNextChar;
           end;
           if CurrLexem <> '' then
+          begin
+            CurrLexem := GenerateAnsi(CurrLexem);
             Add(CurrLexem, CurrPos - Cardinal(Length(CurrLexem)), 2);
-          CurrLexem := '''';
+            CurrLexem := '';
+          end;
+          // CurrLexem := '''';
           GetNextChar;
           { Add('''', CurrPos, 2);
             GetNextChar; }
@@ -413,15 +418,13 @@ begin
         end;
       end
   else
-    Exit; // Ваша собственная ошибка. До этой строчки выполнение дойдет,
-    // если не найден ни один символ, из которого могла бы
-    // состоять лексема
+    Exit;
   end;
 end;
 
 function TLexicalAnalyzer.NextChar: Char;
 begin
-  if CurrPos + 1 > Cardinal(Length(FSource)) then
+  if CurrPos + 1 > Length(FSource) then
     Result := #0
   else
     Result := FSource[CurrPos + 1];
@@ -429,33 +432,31 @@ end;
 
 procedure TLexicalAnalyzer.SetSource(src: String);
 var
-  i, j: Integer;
+  I, j: Integer;
   tmp: string;
 begin
   try
     tmp := src;
 
-    // Удаляем комментарии
-    // сначала однострочные
     j := PosEx(CommentsLine, tmp, 1);
     while j > 0 do
     begin
-      i := j + 2;
-      while (tmp[i] <> #10) and (i <= Length(tmp)) do
-        Inc(i);
-      Delete(tmp, j, i - j);
+      I := j + 2;
+      while (tmp[I] <> #10) and (I <= Length(tmp)) do
+        Inc(I);
+      Delete(tmp, j, I - j);
       j := PosEx(CommentsLine, tmp, 1);
     end;
 
-    // Удаляем пробелы в начале и конце текста
-    i := 1;
-    while CharInSet(tmp[i], [' ', #00 .. #13]) do
-      Inc(i);
-    Delete(tmp, 1, i - 1);
-    i := Length(tmp);
-    while CharInSet(tmp[i], [' ', #00 .. #13]) do
-      Dec(i);
-    Delete(tmp, i + 1, Length(tmp) - i + 1);
+
+    I := 1;
+    while CharInSet(tmp[I], [' ', #00 .. #13]) do
+      Inc(I);
+    Delete(tmp, 1, I - 1);
+    I := Length(tmp);
+    while CharInSet(tmp[I], [' ', #00 .. #13]) do
+      Dec(I);
+    Delete(tmp, I + 1, Length(tmp) - I + 1);
   finally
     Self.FSource := tmp;
     tmp := '';
@@ -463,3 +464,4 @@ begin
 end;
 
 end.
+
