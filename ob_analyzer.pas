@@ -175,10 +175,18 @@ end;
 function TLexicalAnalyzer.GenerateAnsi(const Str: string): string;
 var
   I: Integer;
+  s: string;
 begin
-  Result := '';
+  if (str = #39#39) then
+  begin
+    result:=str+';';
+    exit;
+  end;
+  s := '';
   for I := 1 to Length(Str) do
-    Result := Result + '#' + inttostr(Ord(Str[I]));
+    if not (Ord(Str[I]) = 39) then
+    s := s + '#' + inttostr(Ord(Str[I]));
+    Result:=s+';';
 end;
 
 procedure TLexicalAnalyzer.GetIdentifier;
@@ -364,7 +372,12 @@ begin
             CurrLexem := CurrLexem + CurrChar;
             GetNextChar;
           end;
-          if CurrLexem <> '' then
+           if (CurrChar = #39) then
+            begin
+             CurrLexem := CurrLexem + ''''+'''';
+             GetNextChar;
+            end;
+          if (CurrLexem <> '') then
           begin
             CurrLexem := GenerateAnsi(CurrLexem);
             Add(CurrLexem, CurrPos - Cardinal(Length(CurrLexem)), 2);

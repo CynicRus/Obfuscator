@@ -26,10 +26,10 @@ const
   Chars: set of Char = ['(', ')', '+', '-', '*', '/', ';', '=', '[', ']',
     ',', '@', ':', '.', '<', '>', '#', '$', '''', '"', '{'];
 {$WARNINGS ON}
-  Reserved: array [0 .. 28] of string = ('program', 'var', 'const', 'begin',
+  Reserved: array [0 .. 30] of string = ('program', 'var', 'const', 'begin',
     'end', 'if', 'then', 'while', 'do', 'repeat', 'until', 'case', 'of', 'for',
     'to', 'as', 'is', 'mod', 'div', 'or', 'and', 'xor', 'uses', 'type',
-    'function', 'procedure', 'string', 'nil','pointer');
+    'function', 'procedure', 'string', 'nil','pointer','out','forward');
   type
   ObfuscationOptions =
     (
@@ -424,7 +424,7 @@ var
   I: Integer;
 begin
   Result := false;
-  for I := 0 to 27 do
+  for I := 0 to 30 do
   begin
     if LowerCase(Name) = Reserved[I] then
     begin
