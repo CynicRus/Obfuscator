@@ -79,7 +79,7 @@ type
     procedure GetIdentifier;
     procedure GetOthers;
     function NextChar: Char;
-    function GenerateAnsi(const Str: string): string;
+   { function GenerateAnsi(const Str: string): string;}
     function GetLexem(ind: Integer): TLexem;
     procedure SetSource(src: String);
   public
@@ -93,10 +93,84 @@ type
 
 implementation
 {Small helper}
+function Eq(aValue1, aValue2: string): boolean;
+//--------------------------------------------------------
+begin
+  Result := AnsiCompareText(Trim(aValue1),Trim(aValue2))=0;
+end;
+
+procedure DeleteSpaces(var S: String);
+var
+  I, C: Integer;
+begin
+  I := 1;
+  C := 0;
+  while I <= Length(S) do
+  begin
+    if S[I] = #9 then S[I] := #32;
+    if S[I] = #32 then Inc(C) else
+      if C <> 0 then
+      begin
+        if C > 1 then Delete(S, I - C, C - 1);
+        C := 0;
+        Dec(I, C - 2);
+      end;
+    Inc(I);
+  end;
+end;
+
 function CharInSet(const Ch: Char; const Chars: TCharSet): Boolean;
 begin
   Result := Ch in Chars;
 end;
+
+function GenerateAnsi(const Str: string): string;
+var
+  I: Integer;
+  s: string;
+begin
+  s := '';
+  for I := 1 to Length(Str) do
+    if not (Ord(Str[I]) = 39) then
+    s := s + '#' + inttostr(Ord(Str[I]));
+    Result:=s;
+end;
+
+function PrepareLongLines(const Str: string): string;
+var
+  i,j,ch: integer;
+  tmp: string;
+begin
+  tmp:=str;
+  DeleteSpaces(tmp);
+  j:=Length(tmp);
+  for I:=0 to j do
+    begin
+       Ch:=pos('+',tmp);
+       if (tmp[Ch-1] = #39) or (tmp[Ch+1] = #39) then
+       Delete(tmp,Ch,1);
+      end;
+  result:=tmp;
+  end;
+function PrepareStrValue(const Str: string): string;
+var
+  i,j,ch: integer;
+  tmp: string;
+begin
+  tmp:=str;
+  j:=Length(Str);
+  tmp:=PrepareLongLines(tmp);
+  for I:=0 to j do
+    begin
+       Ch:=pos(#39,tmp);
+       Delete(tmp,Ch,1);
+      end;
+  if not eq(tmp,'') then
+   result:=GenerateAnsi(tmp)
+   else
+   result:=#39+#39;
+  end;
+
 { TLexicalAnalyzer }
 
 procedure TLexicalAnalyzer.Add(Lexem: string; Pos: Integer; LType: Byte);
@@ -172,23 +246,6 @@ begin
   inherited;
 end;
 
-function TLexicalAnalyzer.GenerateAnsi(const Str: string): string;
-var
-  I: Integer;
-  s: string;
-begin
-  if (str = #39#39) then
-  begin
-    result:=str+';';
-    exit;
-  end;
-  s := '';
-  for I := 1 to Length(Str) do
-    if not (Ord(Str[I]) = 39) then
-    s := s + '#' + inttostr(Ord(Str[I]));
-    Result:=s+';';
-end;
-
 procedure TLexicalAnalyzer.GetIdentifier;
 begin
   CurrLexem := CurrChar;
@@ -260,6 +317,8 @@ begin
 end;
 
 procedure TLexicalAnalyzer.GetOthers;
+var
+  i: integer;
 begin
   case CurrChar of
     '+', '-', '*', '/', ';', '=', ')', '[', ']', ',', '@':
@@ -372,14 +431,15 @@ begin
             CurrLexem := CurrLexem + CurrChar;
             GetNextChar;
           end;
-           if (CurrChar = #39) then
-            begin
-             CurrLexem := CurrLexem + ''''+'''';
-             GetNextChar;
-            end;
           if (CurrLexem <> '') then
           begin
-            CurrLexem := GenerateAnsi(CurrLexem);
+            CurrLexem := PrepareStrValue(CurrLexem);
+            Add(CurrLexem, CurrPos - Cardinal(Length(CurrLexem)), 2);
+            CurrLexem := '';
+          end
+          else
+          begin
+            CurrLexem := PrepareStrValue(#39+CurrLexem+#39);
             Add(CurrLexem, CurrPos - Cardinal(Length(CurrLexem)), 2);
             CurrLexem := '';
           end;
