@@ -19,7 +19,7 @@ unit ob_obfuscator;
 interface
 
 uses
-  ob_analyzer,Math, SysUtils;
+  ob_analizer,Math, SysUtils;
 
 const
 {$WARNINGS OFF}

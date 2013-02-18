@@ -74,7 +74,7 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  Self.Caption:='Obfuscator for Simba\SCAR'+#32+ 'v 0.1 for' +#32+ {$IFDEF WINDOWS}'WIN'{$ELSE}'LIN'{$ENDIF}+#32+ 'by Cynic';
+  Self.Caption:='Obfuscator for Simba\SCAR'+#32+ 'v 0.2.1 for' +#32+ {$IFDEF WINDOWS}'WIN'{$ELSE}'LIN'{$ENDIF}+#32+ 'by Cynic';
 end;
 
 procedure TForm1.ToolButton3Click(Sender: TObject);
