@@ -19,7 +19,7 @@ unit ob_obfuscator;
 interface
 
 uses
-  ob_analizer,Math, SysUtils;
+  ob_analyzer,Math, SysUtils;
 
 const
 {$WARNINGS OFF}
@@ -73,7 +73,7 @@ const
     FAnalyzer: TLexicalAnalyzer;
     procedure FindConsts(var constsArray: TStrArray; const pos: Integer);
 
-    procedure FindVars(var varsArray: TStrArray; const pos: Integer);
+    procedure FindVars(var varsArray: TStrArray; const apos: Integer);
 
     procedure ObfuscateNumbers; //
 
@@ -262,13 +262,13 @@ begin
 end;
 
 procedure TObfuscator.FindVars(var varsArray: TStrArray;
-  const pos: Integer);
+  const apos: Integer);
 var
   len, I: Integer;
 begin
   len := 0;
   varsArray := nil;
-  I := pos + 1;
+  I := apos + 1;
   while true do
   begin
     if (FLexems[I].LexType = 0) and (not IsReserved(FLexems[I].Lexem)) then
@@ -489,7 +489,7 @@ begin
        atmp := GenerateUnRdblName;
       for I := 2 to FLC - 1 do
       begin
-        if UpperCase(FLexems[I].Lexem) = UpperCase(GlobalVars.I[j]) then
+        if (UpperCase(FLexems[I].Lexem) = UpperCase(GlobalVars.I[j])) and (FLexems[I-1].Lexem<>'.') then
           FLexems[I].Lexem := atmp;
       end;
     end;
