@@ -21,7 +21,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, ob_main,  ob_obfuscator, ob_analizer
+  Forms, ob_main,  ob_obfuscator, ob_analyzer
   { you can add units after this };
 
 {$R *.res}
